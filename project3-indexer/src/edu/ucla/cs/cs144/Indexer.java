@@ -36,6 +36,8 @@ public class Indexer {
             Directory indexDir = FSDirectory.open(new File("/var/lib/lucene/index1/"));
             IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_4_10_2, new StandardAnalyzer());
             indexWriter = new IndexWriter(indexDir, config);
+            if (create == true)
+                indexWriter.deleteAll();
         }
         return indexWriter;
    }    
@@ -48,15 +50,16 @@ public class Indexer {
 
    public void indexItem(ResultSet rs) throws IOException {
         try{
+            IndexWriter writer = getIndexWriter(false);
             while( rs.next() ){
-                IndexWriter writer = getIndexWriter(false);
                 Document doc = new Document();
                 int itemID = rs.getInt("ItemID");
                 String name = rs.getString("Name");
+                String categories = rs.getString("Categories");
                 String description = rs.getString("Description");
                 doc.add(new IntField("id", itemID, Field.Store.YES));
-                doc.add(new StringField("name", name, Field.Store.YES));
-                String fullSearchableText = itemID + " " + name + " " + description;
+                doc.add(new TextField("name", name, Field.Store.YES));
+                String fullSearchableText = name + " " + categories + " " + description;
                 doc.add(new TextField("content", fullSearchableText, Field.Store.NO));
                 writer.addDocument(doc);
             }
@@ -125,7 +128,12 @@ public class Indexer {
 
             Statement s = conn.createStatement() ;
 
-            ResultSet rs = s.executeQuery("SELECT * FROM Item") ;
+            ResultSet rs = s.executeQuery(
+            "SELECT Item.ItemID, Item.Name, Item.Description, Concated.Categories "+
+            "FROM (SELECT DISTINCT Category.ItemID, "+
+                "GROUP_CONCAT(DISTINCT category SEPARATOR ' ') AS Categories "+
+                "FROM Category GROUP BY ItemID) AS Concated "+
+            "INNER JOIN Item ON Item.ItemID = Concated.ItemID;");
             indexItem(rs);
 
             /* close the resultset, statement and connection */

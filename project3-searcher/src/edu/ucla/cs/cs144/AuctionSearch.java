@@ -6,6 +6,7 @@ import java.io.File;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.ArrayList;
+import java.util.Vector;
 import java.util.List;
 import java.text.SimpleDateFormat;
 
@@ -53,30 +54,29 @@ public class AuctionSearch implements IAuctionSearch {
 	public SearchResult[] basicSearch(String query, int numResultsToSkip, 
 			int numResultsToReturn) {
 		// TODO: Your code here!
+        Vector< SearchResult > vResults = new Vector< SearchResult >();
 
 		try{
 	        IndexSearcher searcher = new IndexSearcher(DirectoryReader.open(FSDirectory.open(new File("/var/lib/lucene/index1/"))));
 	        QueryParser parser = new QueryParser("content", new StandardAnalyzer());
 
 	        Query q = parser.parse(query);        
-	        TopDocs topDocs = searcher.search(q, numResultsToReturn);
+	        TopDocs topDocs = searcher.search(q, numResultsToSkip + numResultsToReturn);
 	        ScoreDoc[] hits = topDocs.scoreDocs;
-	        for (int i = 0; i < hits.length; i++) {
+	        for (int i = numResultsToSkip; i < hits.length; i++) {
 	            Document doc = searcher.doc(hits[i].doc);
-	            System.out.println(doc.get("id")
-	                               + " " + doc.get("name")
-	                               + " (" + hits[i].score + ")");
-
-	        }        
-
-			
+                vResults.add( new SearchResult(doc.get("id"), doc.get("name")) );
+	        }        			
 		} catch (IOException ex) {
 			System.out.println(ex);
 		} catch (ParseException ex) {
 			System.out.println(ex);
 		}
 
-        return new SearchResult[0];
+        SearchResult[] result = new SearchResult[vResults.size()];
+        vResults.copyInto(result);
+
+        return result;
 
 	}
 
