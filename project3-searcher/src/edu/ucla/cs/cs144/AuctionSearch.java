@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.File;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.Collections;
 import java.util.ArrayList;
 import java.util.Vector;
 import java.util.List;
@@ -83,7 +84,78 @@ public class AuctionSearch implements IAuctionSearch {
 	public SearchResult[] spatialSearch(String query, SearchRegion region,
 			int numResultsToSkip, int numResultsToReturn) {
 		// TODO: Your code here!
-		return new SearchResult[0];
+		String polygonRegion = "'Polygon((" +
+		region.getLx() + " " + region.getLy() + "," +
+		region.getRx() + " " + region.getLy() + "," +
+		region.getRx() + " " + region.getRy() + "," +
+		region.getLx() + " " + region.getRy() + "," +
+		region.getLx() + " " + region.getLy() +
+		"))'";
+
+		int skip = 0;
+		int toSkip = numResultsToSkip;
+        Connection conn = null;
+
+        Vector< SearchResult > vResults = new Vector< SearchResult >();
+        Vector< String > spacialResults = new Vector< String >();
+
+	    try {
+		    conn = DbManager.getConnection(true);
+            /* load the driver*/
+            Class.forName("com.mysql.jdbc.Driver"); 
+
+            Statement s = conn.createStatement() ;
+
+            ResultSet rs = s.executeQuery(
+            "SELECT ItemID FROM Location "+
+            "WHERE MBRContains(GeomFromText("+
+        	polygonRegion+
+        	"),Coordinates);");
+
+            while( rs.next() ){
+                spacialResults.add(Integer.toString(rs.getInt("ItemID")));
+            }
+
+            Collections.sort(spacialResults);
+
+            while (vResults.size() < numResultsToReturn){
+				SearchResult[] basicResults = basicSearch(query, skip, numResultsToReturn);
+				if (basicResults.length == 0)
+					break;
+
+	            for (int i = 0; i < basicResults.length; i++){
+	            	if (spacialResults.contains(basicResults[i].getItemId())){
+	            		if (toSkip == 0)
+		            		vResults.add(basicResults[i]);
+		            	else
+		            		toSkip--;
+	            	}
+	            }
+	            skip += numResultsToReturn;
+        	}
+
+            /* close the resultset, statement and connection */
+            rs.close();
+            s.close();
+            conn.close();
+       } catch (ClassNotFoundException ex){
+            System.out.println(ex);
+       } catch (SQLException ex){
+            System.out.println("SQLException caught");
+            System.out.println("---");
+            while ( ex != null ){
+                System.out.println("Message   : " + ex.getMessage());
+                System.out.println("SQLState  : " + ex.getSQLState());
+                System.out.println("ErrorCode : " + ex.getErrorCode());
+                System.out.println("---");
+                ex = ex.getNextException();
+            }
+       } 
+
+        SearchResult[] result = new SearchResult[vResults.size()];
+        vResults.copyInto(result);
+
+		return result;
 	}
 
 	public String getXMLDataForItemId(String itemId) {
