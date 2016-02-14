@@ -2,7 +2,7 @@
 
 ### What is this repository for? ###
 
-* The goal of this project is to provide basic keyword search with a Lucene index and spatial search functionality with a MySQL spatial index on the Ebay data loaded into MySQL in project2. These search functions are published as a Web service using Axis2 and Tomcat. 
+The goal of this project is to provide basic keyword search with a Lucene index and spatial search functionality with a MySQL spatial index on the Ebay data loaded into MySQL in project2. These search functions are published as a Web service using Axis2 and Tomcat. 
 
 ### How do I get set up? ###
 
