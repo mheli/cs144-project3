@@ -107,13 +107,13 @@ public class AuctionSearch implements IAuctionSearch {
 	}
 
 	private String makeOptionalTag(String tagName, String content){
-		if (content.equals("NULL"))
+		if (content.equals(""))
 			return "";
 		return makeTag(tagName, content);
 	}
 
 	private String makeNullableTag(String tagName, String content){
-		if (content.equals("NULL"))
+		if (content.equals(""))
 			return "<"+tagName+" />\n";
 		else
 			return makeTag(tagName, content);
@@ -145,6 +145,15 @@ public class AuctionSearch implements IAuctionSearch {
 			return "<Location Latitude=\""+formatCoord(lat)+"\" "+
 		"Longitude=\""+formatCoord(lon)+"\">"+
 		formatSpecial(content)+"</Location>\n";	
+	}
+
+	private String indent(int x){
+		String result = "";
+		while (x > 0){
+			result += "  ";
+			x--;
+		}
+		return result;
 	}
 
 	public SearchResult[] basicSearch(String query, int numResultsToSkip, 
@@ -364,49 +373,56 @@ public class AuctionSearch implements IAuctionSearch {
             }
        } 
 
+        String optionalTester = "";
 		StringBuilder xml = new StringBuilder();
 		xml.append("<Item ItemID=\"" + itemId + "\">\n");
-		xml.append(makeTag("Name", name));
+		xml.append(indent(1)+makeTag("Name", name));
 		for (int i = 0; i < categories.size(); i++){
-			xml.append(makeTag("Category", categories.get(i)));
+			xml.append(indent(1)+makeTag("Category", categories.get(i)));
 		}
-		xml.append(makeMoneyTag("Currently", currently));
-		xml.append(makeOptionalMoneyTag("Buy_Price", buy_price));
-		xml.append(makeMoneyTag("First_Bid", first_bid));
-		xml.append(makeIntTag("Number_of_Bids", number_of_bids));
+		xml.append(indent(1)+makeMoneyTag("Currently", currently));
+		optionalTester = makeOptionalMoneyTag("Buy_Price", buy_price);
+		if (!optionalTester.equals(""))
+			xml.append(indent(1)+optionalTester);
+		xml.append(indent(1)+makeMoneyTag("First_Bid", first_bid));
+		xml.append(indent(1)+makeIntTag("Number_of_Bids", number_of_bids));
 		if (bids.size() == 0)
-			xml.append("<Bids />\n");
+			xml.append(indent(1)+"<Bids />\n");
 		else{
-			xml.append("<Bids>\n");
+			xml.append(indent(1)+"<Bids>\n");
 			for (int i = 0; i < bids.size(); i++){
 				Bid current = bids.get(i);
-				xml.append("<Bid>\n");
-				if (current.buyer_location.equals("NULL") && current.buyer_country.equals("NULL")){
+				xml.append(indent(2)+"<Bid>\n");
+				if (current.buyer_location.equals("") && current.buyer_country.equals("")){
 					xml.append(
-						"<Bidder Rating=\""+Integer.toString(current.buyer_rating)
+						indent(3)+"<Bidder Rating=\""+Integer.toString(current.buyer_rating)
 						+"\" UserID=\""+current.bidderID+"\" />\n");
 				}
 				else {
 					xml.append(
-						"<Bidder Rating=\""+Integer.toString(current.buyer_rating)
+						indent(3)+"<Bidder Rating=\""+Integer.toString(current.buyer_rating)
 						+"\" UserID=\""+current.bidderID+"\">\n");
-					xml.append(makeOptionalTag("Location", current.buyer_location));
-					xml.append(makeOptionalTag("Country", current.buyer_country));
-					xml.append("</Bidder>\n");
+					optionalTester = makeOptionalTag("Location", current.buyer_location);
+					if (!optionalTester.equals(""))
+						xml.append(indent(4)+optionalTester);
+					optionalTester = makeOptionalTag("Country", current.buyer_country);
+					if (!optionalTester.equals(""))
+						xml.append(indent(4)+optionalTester);
+					xml.append(indent(3)+"</Bidder>\n");
 				}
-				xml.append(makeTimeTag("Time", current.time));
-				xml.append(makeMoneyTag("Amount", current.amount));
-				xml.append("</Bid>\n");
+				xml.append(indent(3)+makeTimeTag("Time", current.time));
+				xml.append(indent(3)+makeMoneyTag("Amount", current.amount));
+				xml.append(indent(2)+"</Bid>\n");
 			}
-			xml.append("</Bids>\n");
+			xml.append(indent(1)+"</Bids>\n");
 		}
-		xml.append(makeExLocationTag(latitude, longitude, location));
-		xml.append(makeTag("Country", country));
-		xml.append(makeTimeTag("Started", started));
-		xml.append(makeTimeTag("Ends", ends));
-		xml.append("<Seller Rating=\""+Integer.toString(seller_rating)+
-			" UserID=\""+sellerID+"\" />\n");
-		xml.append(makeNullableTag("Description", description));
+		xml.append(indent(1)+makeExLocationTag(latitude, longitude, location));
+		xml.append(indent(1)+makeTag("Country", country));
+		xml.append(indent(1)+makeTimeTag("Started", started));
+		xml.append(indent(1)+makeTimeTag("Ends", ends));
+		xml.append(indent(1)+"<Seller Rating=\""+Integer.toString(seller_rating)+
+			"\" UserID=\""+sellerID+"\" />\n");
+		xml.append(indent(1)+makeNullableTag("Description", description));
 		xml.append("</Item>\n");
 
 		return xml.toString();
